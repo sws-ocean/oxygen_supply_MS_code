@@ -1,9 +1,9 @@
 %% Recreate TnK using 5-year sliding-window endmembers
-%
-% addpath(genpath('/Users/samst/Dropbox/Hakai/'));
-% addpath(genpath('/Users/samst/Dropbox/UBC/GSW/'));
-% addpath(genpath('/Users/samst/Dropbox/UBC/m_map/'));
-% addpath(genpath('/Users/samst/Dropbox/UBC/Misc/'));
+
+addpath(genpath('/Users/samst/Dropbox/Hakai/'));
+addpath(genpath('/Users/samst/Dropbox/UBC/GSW/'));
+addpath(genpath('/Users/samst/Dropbox/UBC/m_map/'));
+addpath(genpath('/Users/samst/Dropbox/UBC/Misc/'));
 
 %%
 clear
@@ -2556,6 +2556,554 @@ msk = isfinite(x) & isfinite(y);
 
 fprintf('P4 vs CS-OS PEW-core sigma-theta: r = %.3f, R2 = %.3f, p = %.3g, N = %d\n', ...
     R(1,2),R(1,2)^2,P(1,2),sum(msk));
+% keyboard
+
+%% fPEW vertical structure + interannual PEW-core variability
+f1 = figure('units','centimeters','outerposition',[0.01 0.01 11 22],'color','w');
+% PSUW mean profiles
+mean_alpha_SAW = mean(alpha_PEW_SAW_source,2,'omitnan');
+mean_z_SAW = mean(SAWz_monthly_grid,2,'omitnan');
+% ============================================================
+% Annual PEW-core diagnostics for lower panels
+% ============================================================
+Y_cs = year(CSOS.mtime);
+Y_p4 = year(P4.mtime);
+% Full year grids so gaps remain visible
+years_cs = min(Y_cs(isfinite(Y_cs))):max(Y_cs(isfinite(Y_cs)));
+years_p4 = 1980:max(Y_p4(isfinite(Y_p4)));
+mean_z_cs  = NaN(size(years_cs));
+mean_st_cs = NaN(size(years_cs));
+std_z_cs   = NaN(size(years_cs));
+std_st_cs  = NaN(size(years_cs));
+mean_z_p4  = NaN(size(years_p4));
+mean_st_p4 = NaN(size(years_p4));
+std_z_p4   = NaN(size(years_p4));
+std_st_p4  = NaN(size(years_p4));
+% -----------------
+% CS-OS
+% -----------------
+for k = 1:length(years_cs)
+    idx = Y_cs == years_cs(k);
+    if any(idx)
+        if sum(isfinite(CS_z_all(idx))) > 1
+            mean_z_cs(k) = mean(CS_z_all(idx),'omitnan');
+            std_z_cs(k)  = std(CS_z_all(idx),'omitnan');
+        end
+        if sum(isfinite(CS_st_all(idx))) > 1
+            mean_st_cs(k) = mean(CS_st_all(idx),'omitnan');
+            std_st_cs(k)  = std(CS_st_all(idx),'omitnan');
+        end
+    end
+end
+% -----------------
+% P4
+% -----------------
+for k = 1:length(years_p4)
+    idx = Y_p4 == years_p4(k);
+    if any(idx)
+        if sum(isfinite(P4_z_all(idx))) > 1
+            mean_z_p4(k) = mean(P4_z_all(idx),'omitnan');
+            std_z_p4(k)  = std(P4_z_all(idx),'omitnan');
+        end
+        if sum(isfinite(P4_st_all(idx))) > 1
+            mean_st_p4(k) = mean(P4_st_all(idx),'omitnan');
+            std_st_p4(k)  = std(P4_st_all(idx),'omitnan');
+        end
+    end
+end
+% ============================================================
+% Manual panel positions
+%
+% Approximate equivalent of:
+% subplot(6,1,1:2)
+% subplot(6,1,3:4)
+% subplot(6,1,5)
+% subplot(6,1,6)
+% ============================================================
+left = 0.1;
+width = 0.79;
+ax_sub1 = axes('Position',[left 0.695 width 0.285]);  % depth profile
+ax_sub2 = axes('Position',[left 0.395 width 0.285]);  % density profile
+ax_sub3 = axes('Position',[left 0.205 width 0.145]);  % depth time series
+ax_sub4 = axes('Position',[left 0.045 width 0.145]);  % density time series
+% ============================================================
+% Panel 1: depth vs fPEW
+% ============================================================
+axes(ax_sub1);
+hold on;
+plot(alpha_PEW_P4,1:1000,'color',[rgb_x('steel blue') 0.02],'linewidth',0.75);
+plot(alpha_PEW_CSOS,1:1000,'color',[rgb_x('rose') 0.05],'linewidth',0.75);
+plot(alpha_PEW_SAW_source,SAWz_monthly_grid,'color',[rgb_x('greyish purple') 0.03],'linewidth',0.75);
+% -----------------
+% Mean P4
+% -----------------
+plot(mean(alpha_PEW_P4,2,'omitnan'),1:1000,'w','linewidth',4);
+lp4 = plot(mean(alpha_PEW_P4,2,'omitnan'),1:1000,'color',rgb_x('steel blue'),'linewidth',2);
+% -----------------
+% Mean CS-OS
+% -----------------
+plot(mean(alpha_PEW_CSOS,2,'omitnan'),1:1000,'w','linewidth',4);
+lcs = plot(mean(alpha_PEW_CSOS,2,'omitnan'),1:1000,'color',rgb_x('rose'),'linewidth',2);
+% -----------------
+% Mean PSUW source
+% -----------------
+plot(mean_alpha_SAW,mean_z_SAW,'w','linewidth',4);
+lsaw = plot(mean_alpha_SAW,mean_z_SAW,'color',rgb_x('greyish purple'),'linewidth',2);
+axis ij;
+ylabel('Depth (m)');
+grid on;
+% ============================================================
+% 0.2 sigma-theta spacing
+% ============================================================
+for i = 25:0.2:27
+    % -----------------
+    % CS-OS
+    % -----------------
+    y = interp1(csst,1:1000,i);
+    x = interp1(1:1000,mean(alpha_PEW_CSOS,2,'omitnan'),y);
+    scatter(x,y,10,'filled','markerfacecolor','w','markeredgecolor',rgb_x('rose'));
+    % -----------------
+    % P4
+    % -----------------
+    y = interp1(p4st,1:1000,i);
+    x = interp1(1:1000,mean(alpha_PEW_P4,2,'omitnan'),y);
+    s1 = scatter(x,y,10,'filled','markerfacecolor','w','markeredgecolor',rgb_x('steel blue'));
+    % -----------------
+    % PSUW source
+    % -----------------
+    msk_SAW = isfinite(mean_z_SAW) & isfinite(sgrid) & isfinite(mean_alpha_SAW);
+    z_tmp = mean_z_SAW(msk_SAW);
+    st_tmp = sgrid(msk_SAW);
+    a_tmp = mean_alpha_SAW(msk_SAW);
+    [z_tmp,ii] = sort(z_tmp);
+    st_tmp = st_tmp(ii);
+    a_tmp = a_tmp(ii);
+    [z_tmp,ia] = unique(z_tmp);
+    st_tmp = st_tmp(ia);
+    a_tmp = a_tmp(ia);
+    if length(z_tmp) >= 2
+        y = interp1(st_tmp,z_tmp,i);
+        x = interp1(st_tmp,a_tmp,i);
+        if isfinite(x) && isfinite(y)
+            scatter(x,y,10,'filled','markerfacecolor','w','markeredgecolor',rgb_x('greyish purple'));
+        end
+    end
+end
+% ============================================================
+% PEW cores
+% ============================================================
+% -----------------
+% CS-OS
+% -----------------
+tmp = mean(alpha_PEW_CSOS,2,'omitnan');
+errorbar(tmp(CS_z_max),CS_z_max,CS_z_max_std,CS_z_max_std,...
+    'LineStyle','none','Color',rgb_x('rose'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(tmp(CS_z_max),CS_z_max,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('rose'));
+% -----------------
+% P4
+% -----------------
+tmp = mean(alpha_PEW_P4,2,'omitnan');
+errorbar(tmp(P4_z_max),P4_z_max,P4_z_max_std,P4_z_max_std,...
+    'LineStyle','none','Color',rgb_x('steel blue'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(tmp(P4_z_max),P4_z_max,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('steel blue'));
+% -----------------
+% PSUW source
+% -----------------
+errorbar(mean_alpha_SAW(SAW_i_max),SAW_z_mean,SAW_z_std,SAW_z_std,...
+    'LineStyle','none','Color',rgb_x('greyish purple'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(mean_alpha_SAW(SAW_i_max),SAW_z_mean,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('greyish purple'));
+s2 = scatter(NaN,NaN,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('black'));
+axis tight;
+ylim([75 500]);
+box on;
+% ============================================================
+% Labels above mean profiles
+% ============================================================
+x_p4_lab  = mean(alpha_PEW_P4,2,'omitnan');
+x_p4_lab  = x_p4_lab(75);
+x_cs_lab  = mean(alpha_PEW_CSOS,2,'omitnan');
+x_cs_lab  = x_cs_lab(75);
+x_saw_lab = mean(mean_alpha_SAW,2,'omitnan');
+x_saw_lab = x_saw_lab(75);
+xl = xlim;
+x_p4_norm  = (x_p4_lab-xl(1))  ./ diff(xl);
+x_cs_norm  = (x_cs_lab-xl(1))  ./ diff(xl);
+x_saw_norm = (x_saw_lab-xl(1)) ./ diff(xl);
+text(x_p4_norm,1.015,'P4', ...
+    'Units','normalized', ...
+    'HorizontalAlignment','center', ...
+    'VerticalAlignment','bottom', ...
+    'Color',rgb_x('steel blue'), ...
+    'FontSize',8,'fontweight','bold');
+text(x_cs_norm,1.015,'CS-OS', ...
+    'Units','normalized', ...
+    'HorizontalAlignment','center', ...
+    'VerticalAlignment','bottom', ...
+    'Color',rgb_x('rose'), ...
+    'FontSize',8,'fontweight','bold');
+text(x_saw_norm,1.015,'PSUW', ...
+    'Units','normalized', ...
+    'HorizontalAlignment','center', ...
+    'VerticalAlignment','bottom', ...
+    'Color',rgb_x('greyish purple'), ...
+    'FontSize',8,'fontweight','bold');
+legend([s1,s2], ...
+    {'0.2 \sigma_\theta spacing','PEW core'}, ...
+    'Location','southeast', ...
+    'FontSize',8);
+xticklabels([]);
+% ============================================================
+% Panel 2: density vs fPEW
+% ============================================================
+axes(ax_sub2);
+hold on;
+plot(alpha_PEW_P4,P4.s_t,'color',[rgb_x('steel blue') 0.02],'linewidth',0.75);
+plot(alpha_PEW_CSOS,CSOS.s_t,'color',[rgb_x('rose') 0.05],'linewidth',0.75);
+plot(alpha_PEW_SAW_source,sgrid,'color',[rgb_x('greyish purple') 0.03],'linewidth',0.75);
+% -----------------
+% Mean P4
+% -----------------
+plot(mean(alpha_PEW_P4,2,'omitnan'),p4st,'w','linewidth',4);
+lp4_st = plot(mean(alpha_PEW_P4,2,'omitnan'),p4st,...
+    'color',rgb_x('steel blue'),'linewidth',2);
+% -----------------
+% Mean CS-OS
+% -----------------
+plot(mean(alpha_PEW_CSOS,2,'omitnan'),csst,'w','linewidth',4);
+lcs_st = plot(mean(alpha_PEW_CSOS,2,'omitnan'),csst,...
+    'color',rgb_x('rose'),'linewidth',2);
+% -----------------
+% Mean PSUW source
+% -----------------
+plot(mean_alpha_SAW,sgrid,'w','linewidth',4);
+lsaw_st = plot(mean_alpha_SAW,sgrid,...
+    'color',rgb_x('greyish purple'),'linewidth',2);
+xlabel('\it{f_{PEW}}');
+ylabel('\sigma_\theta (kg m^{-3})');
+grid on;
+box on;
+% ============================================================
+% 50 m spacing markers
+% ============================================================
+for i = 50:50:500
+    % -----------------
+    % CS-OS
+    % -----------------
+    scatter(mean(alpha_PEW_CSOS(i,:),2,'omitnan'),csst(i),10,'filled',...
+        'markerfacecolor','w','markeredgecolor',rgb_x('rose'));
+    % -----------------
+    % P4
+    % -----------------
+    s1b = scatter(mean(alpha_PEW_P4(i,:),2,'omitnan'),p4st(i),10,'filled',...
+        'markerfacecolor','w','markeredgecolor',rgb_x('steel blue'));
+    % -----------------
+    % PSUW source
+    % -----------------
+    msk_SAW = isfinite(mean_z_SAW) & isfinite(sgrid) & isfinite(mean_alpha_SAW);
+    z_tmp = mean_z_SAW(msk_SAW);
+    st_tmp = sgrid(msk_SAW);
+    a_tmp = mean_alpha_SAW(msk_SAW);
+    [z_tmp,ii] = sort(z_tmp);
+    st_tmp = st_tmp(ii);
+    a_tmp = a_tmp(ii);
+    [z_tmp,ia] = unique(z_tmp);
+    st_tmp = st_tmp(ia);
+    a_tmp = a_tmp(ia);
+    if length(z_tmp) >= 2
+        st_i = interp1(z_tmp,st_tmp,i);
+        if isfinite(st_i)
+            x = interp1(st_tmp,a_tmp,st_i);
+            if isfinite(x)
+                scatter(x,st_i,10,'filled',...
+                    'markerfacecolor','w',...
+                    'markeredgecolor',rgb_x('greyish purple'));
+            end
+        end
+    end
+end
+% ============================================================
+% PEW maxima
+% ============================================================
+% -----------------
+% CS-OS
+% -----------------
+tmp = mean(alpha_PEW_CSOS,2,'omitnan');
+errorbar(tmp(CS_z_max),CS_st_median,CS_st_std,CS_st_std,...
+    'LineStyle','none','Color',rgb_x('rose'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(tmp(CS_z_max),CS_st_median,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('rose'));
+% -----------------
+% P4
+% -----------------
+tmp = mean(alpha_PEW_P4,2,'omitnan');
+errorbar(tmp(P4_z_max),P4_st_median,P4_st_std,P4_st_std,...
+    'LineStyle','none','Color',rgb_x('steel blue'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(tmp(P4_z_max),P4_st_median,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('steel blue'));
+% -----------------
+% PSUW source
+% -----------------
+errorbar(mean_alpha_SAW(SAW_i_max),SAW_st_median,SAW_st_std,SAW_st_std,...
+    'LineStyle','none','Color',rgb_x('greyish purple'),'LineWidth',1.3,...
+    'CapSize',4,'HandleVisibility','off');
+scatter(mean_alpha_SAW(SAW_i_max),SAW_st_median,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('greyish purple'));
+s2b = scatter(NaN,NaN,30,'filled',...
+    'markerfacecolor',rgb_x('light grey'),...
+    'markeredgecolor',rgb_x('black'));
+set(gca,'YDir','reverse');
+axis tight;
+ylim([26 27]);
+legend([s1b,s2b],...
+    {'50 m spacing','PEW core'},...
+    'Location','southeast',...
+    'FontSize',8);
+% ============================================================
+% Panel 3: PEW-core depth time series
+% ============================================================
+axes(ax_sub3);
+hold on;
+% Individual profiles
+scatter(CSOS.mtime,CS_z_all,8,'filled',...
+    'markerfacecolor',rgb_x('rose'),...
+    'MarkerFaceAlpha',0.10,...
+    'MarkerEdgeColor','none');
+p4mask = P4.mtime > datenum(1980,1,1);
+scatter(P4.mtime(p4mask),P4_z_all(p4mask),8,'filled',...
+    'markerfacecolor',rgb_x('steel blue'),...
+    'MarkerFaceAlpha',0.075,...
+    'MarkerEdgeColor','none');
+% Annual ±1 SD
+errorbar(datenum(years_cs,1,1),mean_z_cs,std_z_cs,...
+    'LineStyle','none',...
+    'Color',rgb_x('rose'),...
+    'LineWidth',0.25,...
+    'CapSize',2,...
+    'HandleVisibility','off');
+errorbar(datenum(years_p4,1,1),mean_z_p4,std_z_p4,...
+    'LineStyle','none',...
+    'Color',rgb_x('steel blue'),...
+    'LineWidth',0.25,...
+    'CapSize',2,...
+    'HandleVisibility','off');
+% Annual means
+lcs_z = plot(datenum(years_cs,1,1),mean_z_cs,'-',...
+    'color',rgb_x('rose'),'LineWidth',1.25);
+scatter(datenum(years_cs,1,1),mean_z_cs,10,'filled',...
+    'markerfacecolor',rgb_x('rose'),...
+    'MarkerFaceAlpha',0.8,...
+    'MarkerEdgeColor',rgb_x('rose'),...
+    'HandleVisibility','off');
+lp4_z = plot(datenum(years_p4,1,1),mean_z_p4,'-',...
+    'color',rgb_x('steel blue'),'LineWidth',1.25);
+scatter(datenum(years_p4,1,1),mean_z_p4,10,'filled',...
+    'markerfacecolor',rgb_x('steel blue'),...
+    'MarkerFaceAlpha',0.8,...
+    'MarkerEdgeColor',rgb_x('steel blue'),...
+    'HandleVisibility','off');
+ylabel('PEW core depth (m)');
+set(gca,'YDir','reverse');
+xlim([datenum(1980,1,1) datenum(2025,1,1)]);
+datetick('x','yyyy','keeplimits');
+set(gca,'XTickLabel',[]);
+grid on;
+box on;
+% legend([lp4_z,lcs_z],{'P4','CS-OS'},'Location','best','FontSize',7);
+% ============================================================
+% Panel 4: PEW-core sigma-theta time series
+% ============================================================
+axes(ax_sub4);
+hold on;
+scatter(CSOS.mtime,CS_st_all,8,'filled',...
+    'markerfacecolor',rgb_x('rose'),...
+    'MarkerFaceAlpha',0.10,...
+    'MarkerEdgeColor','none');
+scatter(P4.mtime(p4mask),P4_st_all(p4mask),8,'filled',...
+    'markerfacecolor',rgb_x('steel blue'),...
+    'MarkerFaceAlpha',0.075,...
+    'MarkerEdgeColor','none');
+% Annual ±1 SD
+errorbar(datenum(years_cs,1,1),mean_st_cs,std_st_cs,...
+    'LineStyle','none',...
+    'Color',rgb_x('rose'),...
+    'LineWidth',0.25,...
+    'CapSize',2,...
+    'HandleVisibility','off');
+errorbar(datenum(years_p4,1,1),mean_st_p4,std_st_p4,...
+    'LineStyle','none',...
+    'Color',rgb_x('steel blue'),...
+    'LineWidth',0.25,...
+    'CapSize',2,...
+    'HandleVisibility','off');
+% Annual means
+op2=plot(datenum(years_cs,1,1),mean_st_cs,'-',...
+    'color',rgb_x('rose'),'LineWidth',1.25);
+scatter(datenum(years_cs,1,1),mean_st_cs,10,'filled',...
+    'markerfacecolor',rgb_x('rose'),...
+    'MarkerFaceAlpha',0.8,...
+    'MarkerEdgeColor',rgb_x('rose'),...
+    'HandleVisibility','off');
+op1=plot(datenum(years_p4,1,1),mean_st_p4,'-',...
+    'color',rgb_x('steel blue'),'LineWidth',1.25);
+scatter(datenum(years_p4,1,1),mean_st_p4,10,'filled',...
+    'markerfacecolor',rgb_x('steel blue'),...
+    'MarkerFaceAlpha',0.8,...
+    'MarkerEdgeColor',rgb_x('steel blue'),...
+    'HandleVisibility','off');
+ylabel('PEW core \sigma_\theta (kg m^{-3})');
+xlabel('Year');
+xlim([datenum(1980,1,1) datenum(2025,1,1)]);
+datetick('x','yyyy','keeplimits');
+grid on;
+box on;
+legend([op1 op2], 'P4', 'CS-OS', 'location', 'northeast');
+% ============================================================
+% Link time-series x axes
+% ============================================================
+linkaxes([ax_sub3 ax_sub4],'x');
+% ============================================================
+% Formatting
+% ============================================================
+set(findall(gcf,'-property','fontsize'),'fontsize',8);
+set(findall(gcf,'-property','fontname'),'fontname','Latin Modern Roman');
+% Inter-station correlations: PEW-core depth and sigma-theta
+[~,ia,ib] = intersect(years_p4,years_cs);
+% PEW-core depth
+x = mean_z_p4(ia);
+y = mean_z_cs(ib);
+msk = isfinite(x) & isfinite(y);
+[R,P] = corrcoef(x(msk),y(msk));
+fprintf('P4 vs CS-OS PEW-core depth: r = %.3f, R2 = %.3f, p = %.3g, N = %d\n', ...
+    R(1,2),R(1,2)^2,P(1,2),sum(msk));
+% PEW-core sigma-theta
+x = mean_st_p4(ia);
+y = mean_st_cs(ib);
+msk = isfinite(x) & isfinite(y);
+[R,P] = corrcoef(x(msk),y(msk));
+fprintf('P4 vs CS-OS PEW-core sigma-theta: r = %.3f, R2 = %.3f, p = %.3g, N = %d\n', ...
+    R(1,2),R(1,2)^2,P(1,2),sum(msk));
+
+%% PEW-core depth and density trends
+trend_years = [];   % [] uses all valid years in the annual series above
+nboot = 2000;
+% Depth uses the existing core row indices, as in the plotted time series.
+% Interpret depth slopes as m/yr only if row i corresponds to i metres.
+
+% P4 core depth trend
+msk = isfinite(years_p4) & isfinite(mean_z_p4);
+
+if ~isempty(trend_years)
+    msk = msk & years_p4 >= trend_years(1) & years_p4 <= trend_years(2);
+end
+
+if sum(msk) >= 3
+    pfit = polyfit(years_p4(msk),mean_z_p4(msk),1);
+    [R,~] = corrcoef(years_p4(msk),mean_z_p4(msk));
+    [~,p_mk] = mann_kendall(mean_z_p4(msk),0.1);
+    berr = bootstrap_trend_error(years_p4(msk),mean_z_p4(msk),nboot);
+
+    fprintf('P4 core depth trend %.0f-%.0f: %.4g +/- %.4g grid rows yr^-1, r=%.2f, MK p=%.3f\n', ...
+        min(years_p4(msk)),max(years_p4(msk)),pfit(1),berr,R(1,2),p_mk);
+
+    if p_mk < 0.1
+        plot(ax_sub3,datenum(years_p4(msk),6,1),...
+            polyval(pfit,years_p4(msk)),...
+            '--','color',rgb_x('steel blue'),...
+            'linewidth',1.5,...
+            'HandleVisibility','off');
+    end
+end
+
+% CS-OS core depth trend
+msk = isfinite(years_cs) & isfinite(mean_z_cs);
+
+if ~isempty(trend_years)
+    msk = msk & years_cs >= trend_years(1) & years_cs <= trend_years(2);
+end
+
+if sum(msk) >= 3
+    pfit = polyfit(years_cs(msk),mean_z_cs(msk),1);
+    [R,~] = corrcoef(years_cs(msk),mean_z_cs(msk));
+    [~,p_mk] = mann_kendall(mean_z_cs(msk),0.1);
+    berr = bootstrap_trend_error(years_cs(msk),mean_z_cs(msk),nboot);
+
+    fprintf('CS-OS core depth trend %.0f-%.0f: %.4g +/- %.4g grid rows yr^-1, r=%.2f, MK p=%.3f\n', ...
+        min(years_cs(msk)),max(years_cs(msk)),pfit(1),berr,R(1,2),p_mk);
+
+    if p_mk < 0.1
+        plot(ax_sub3,datenum(years_cs(msk),6,1),...
+            polyval(pfit,years_cs(msk)),...
+            '--','color',rgb_x('rose'),...
+            'linewidth',1.5,...
+            'HandleVisibility','off');
+    end
+end
+
+% P4 core density trend
+msk = isfinite(years_p4) & isfinite(mean_st_p4);
+
+if ~isempty(trend_years)
+    msk = msk & years_p4 >= trend_years(1) & years_p4 <= trend_years(2);
+end
+
+if sum(msk) >= 3
+    pfit = polyfit(years_p4(msk),mean_st_p4(msk),1);
+    [R,~] = corrcoef(years_p4(msk),mean_st_p4(msk));
+    [~,p_mk] = mann_kendall(mean_st_p4(msk),0.1);
+    berr = bootstrap_trend_error(years_p4(msk),mean_st_p4(msk),nboot);
+
+    fprintf('P4 core density trend %.0f-%.0f: %.4g +/- %.4g kg m^-3 yr^-1, r=%.2f, MK p=%.3f\n', ...
+        min(years_p4(msk)),max(years_p4(msk)),pfit(1),berr,R(1,2),p_mk);
+
+    if p_mk < 0.1
+        plot(ax_sub4,datenum(years_p4(msk),6,1),...
+            polyval(pfit,years_p4(msk)),...
+            '--','color',rgb_x('steel blue'),...
+            'linewidth',1.5,...
+            'HandleVisibility','off');
+    end
+end
+
+% CS-OS core density trend
+msk = isfinite(years_cs) & isfinite(mean_st_cs);
+
+if ~isempty(trend_years)
+    msk = msk & years_cs >= trend_years(1) & years_cs <= trend_years(2);
+end
+
+if sum(msk) >= 3
+    pfit = polyfit(years_cs(msk),mean_st_cs(msk),1);
+    [R,~] = corrcoef(years_cs(msk),mean_st_cs(msk));
+    [~,p_mk] = mann_kendall(mean_st_cs(msk),0.1);
+    berr = bootstrap_trend_error(years_cs(msk),mean_st_cs(msk),nboot);
+
+    fprintf('CS-OS core density trend %.0f-%.0f: %.4g +/- %.4g kg m^-3 yr^-1, r=%.2f, MK p=%.3f\n', ...
+        min(years_cs(msk)),max(years_cs(msk)),pfit(1),berr,R(1,2),p_mk);
+
+    if p_mk < 0.1
+        plot(ax_sub4,datenum(years_cs(msk),6,1),...
+            polyval(pfit,years_cs(msk)),...
+            '--','color',rgb_x('rose'),...
+            'linewidth',1.5,...
+            'HandleVisibility','off');
+    end
+end
 
 %%
 % export_fig /Users/samst/Library/CloudStorage/Dropbox/Hakai/gyre/supply/figs/PEWvsSAUWvertical.jpg -m5
@@ -3774,7 +4322,7 @@ for n = 1:4
 
 end
 
-%% Interannual PEW core depth, density, fPEW, and biogeochemical signal
+%% Interannual PEW core biogeochemical signal
 clc
 
 f1 = figure('units','centimeters','outerposition',...
@@ -4431,7 +4979,7 @@ set(findall(gcf,'-property','fontname'),...
 
 
 %%
-export_fig /Users/samst/Library/CloudStorage/Dropbox/Hakai/gyre/supply/figs/interannual.jpg -m5
+% export_fig /Users/samst/Library/CloudStorage/Dropbox/Hakai/gyre/supply/figs/interannual.jpg -m5
 
 %% Annual diagnostics
 
@@ -4736,14 +5284,14 @@ hold on
 
 fprintf('\n---------------- NO vs fPEW ----------------\n');
 
-CSOS.isoNO = CSOS.isoDO + 8.625 .* CSOS.isoNO3;
-CSOS.isoPO = CSOS.isoDO + 138   .* CSOS.isoPO4;
-
-CSOS.isoNO(CSOS.isoNO < 360) = NaN;
-CSOS.isoPO(CSOS.isoPO < 360) = NaN;
-
-P4.isoNO = P4.isoDO + 8.625 .* P4.isoNO3;
-P4.isoPO = P4.isoDO + 138   .* P4.isoPO4;
+% CSOS.isoNO = CSOS.isoDO + 8.625 .* CSOS.isoNO3;
+% CSOS.isoPO = CSOS.isoDO + 138   .* CSOS.isoPO4;
+% 
+% CSOS.isoNO(CSOS.isoNO < 360) = NaN;
+% CSOS.isoPO(CSOS.isoPO < 360) = NaN;
+% 
+% P4.isoNO = P4.isoDO + 8.625 .* P4.isoNO3;
+% P4.isoPO = P4.isoDO + 138   .* P4.isoPO4;
 
 
 % ----- CSOS -----
@@ -5047,7 +5595,7 @@ fprintf('Done.\n');
 fprintf('============================================================\n\n');
 
 %%
-% export_fig /Users/samst/Library/CloudStorage/Dropbox/Hakai/gyre/supply/figs/DO_N_NO.jpg -m5
+export_fig /Users/samst/Library/CloudStorage/Dropbox/Hakai/gyre/supply/figs/DO_N_NO.jpg -m5
 
 %% Calculate O*, N', and P'
 
@@ -6051,3 +6599,55 @@ lon = squeeze(ncread(ncfile,lon_name));
 lat = squeeze(ncread(ncfile,lat_name));
 
 end
+
+
+%% NO vs temperature, salinity, and fPEW at PEW-core isopycnals
+
+stations = {CSOS,P4};
+names = {'CS-OS','P4'};
+cols = {rgb_x('rose'),rgb_x('steel blue')};
+fractions = {alpha_PEW_CSOS_26p5,alpha_PEW_P4_26p5};
+vars = {'isoT','isoSR','fPEW'};
+xlabels = {'Potential Temperature (°C)', ...
+           'Reference Salinity (g kg^{-1})','f_{PEW}'};
+
+figure('units','centimeters','outerposition',[0.01 0.01 25 9],'color','w');
+
+for j = 1:3
+    subplot(1,3,j); hold on;
+
+    for k = 1:2
+        y = stations{k}.isoNO(2,:)';
+
+        if j < 3
+            x = stations{k}.(vars{j})(2,:)';
+        else
+            x = fractions{k}(:);
+        end
+
+        msk = isfinite(x) & isfinite(y);
+        if sum(msk) < 3, continue; end
+
+        [R,P] = corrcoef(x(msk),y(msk));
+        coeffs = polyfit(x(msk),y(msk),1);
+        xx = linspace(min(x(msk)),max(x(msk)),100);
+
+        scatter(x(msk),y(msk),12,'filled', ...
+            'MarkerFaceColor',cols{k},'MarkerFaceAlpha',0.3, ...
+            'DisplayName',sprintf('%s (R^2 = %.2f)',names{k},R(1,2)^2));
+
+        plot(xx,polyval(coeffs,xx),'--','Color',cols{k}, ...
+            'LineWidth',1.5,'HandleVisibility','off');
+
+        fprintf('%s NO vs %s: N=%d, R2=%.3f, p=%.3g, slope=%.3f\n', ...
+            names{k},vars{j},sum(msk),R(1,2)^2,P(1,2),coeffs(1));
+    end
+
+    xlabel(xlabels{j});
+    ylabel('NO (\mumol kg^{-1})');
+    legend('Location','best');
+    grid on; box on;
+end
+
+set(findall(gcf,'-property','fontname'),'fontname','Latin Modern Roman');
+set(findall(gcf,'-property','fontsize'),'fontsize',9);
